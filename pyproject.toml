@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "globe-itw"
+version = "0.1.0"
+description = ""
+authors = ["tyron ferreira <tyron@MBP-de-tyron.lan>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+dbt-snowflake = "^1.10.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
