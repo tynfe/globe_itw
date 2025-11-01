@@ -1,0 +1,69 @@
+name: Triggered dbt dev and prod run
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  DBT_PROFILES_DIR: ./
+  DBT_SNOWFLAKE_ACCOUNT: ${{ secrets.DBT_SNOWFLAKE_ACCOUNT }}
+  DBT_SNOWFLAKE_PW: ${{ secrets.DBT_SNOWFLAKE_PW }}
+
+jobs:
+  dbt_run_dev:
+    name: dbt dev build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9.x"
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-snowflake
+
+      - name: Run dbt models
+        run: dbt build
+        working-directory: ./dbt_hol
+
+      - name: Upload dbt run artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dbt-run-results
+          path: ./dbt_hol/target
+
+  dbt_run_prod:
+    name: dbt prod build
+    needs: dbt_run_dev
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9.x"
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-snowflake
+
+      - name: Download dbt run artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dbt-run-results
+          path: ./dbt_hol/target
+
+      - name: Run dbt models for prod
+        run: dbt build --target prod
+        working-directory: ./dbt_hol
