@@ -156,11 +156,10 @@ jobs:
       - name: Generate Elementary Report (Staging)
         run: |
           edr report \
-            --profile elementary \
             --target default \
             --profiles-dir ./ \
             --file-path ./elementary_staging_report.html
-          continue-on-error: true
+        continue-on-error: false
 
       - name: Upload staging docs
         uses: actions/upload-artifact@v4

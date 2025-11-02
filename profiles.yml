@@ -1,5 +1,5 @@
 globe_itw:
-  target: dev
+  target: staging
   outputs:
     dev:
       type: snowflake
