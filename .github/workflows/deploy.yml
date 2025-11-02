@@ -135,7 +135,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install dbt-snowflake
+          pip install dbt-snowflake elementary-data
           dbt deps
 
       - name: Build staging
@@ -152,6 +152,31 @@ jobs:
           name: staging-artifacts
           path: target/
           retention-days: 7
+
+      - name: Generate Elementary Report (Staging)
+        run: |
+          edr report \
+            --profile elementary \
+            --target default \
+            --profiles-dir ./ \
+            --file-path ./elementary_staging_report.html
+          continue-on-error: true
+
+      - name: Upload staging docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-docs
+          path: target/
+          retention-days: 30
+
+      - name: Upload staging Elementary report
+        uses: actions/upload-artifact@v4
+        with:
+          name: elementary-staging-report
+          path: ./elementary_staging_report.html
+          retention-days: 30
+        if: success()
+
 
   # ============================================
   # PRODUCTION - Tags uniquement
@@ -173,14 +198,320 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install dbt-snowflake
+          pip install dbt-snowflake elementary-data
           dbt deps
 
       - name: Deploy to production
         env:
           DBT_DATABASE: DHW_PROD_TYRON
-          DBT_SCHEMA: PROD
+          DBT_SCHEMA: GOLD
         run: |
-          echo "🚀 Deploying to PRODUCTION - Tag: ${{ github.ref_name }}"
-          dbt build --target prod --full-refresh
-          dbt docs generate --target prod
+         echo "🚀 Deploying to PRODUCTION - Tag: ${{ github.ref_name }}"
+         dbt build --target prod --full-refresh
+         dbt docs generate --target prod
+
+      - name: Generate Elementary Report (Production)
+        run: |
+            edr report \
+              --profile elementary \
+              --target default \
+              --profiles-dir ./ \
+              --file-path ./elementary_prod_report.html
+        continue-on-error: true
+
+      - name: Upload production docs
+        uses: actions/upload-artifact@v4
+        with:
+              name: prod-docs
+              path: target/
+              retention-days: 90
+
+      - name: Upload production Elementary report
+        uses: actions/upload-artifact@v4
+        with:
+            name: elementary-prod-report
+            path: ./elementary_prod_report.html
+            retention-days: 90
+            if: success()
+
+
+  deploy_docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [dbt_staging_main]
+    if: github.ref == 'refs/heads/staging'
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Télécharger les docs dbt
+      - name: Download staging docs
+        uses: actions/download-artifact@v4
+        with:
+          name: staging-docs
+          path: ./docs-staging
+
+      - name: Download production docs (if exists)
+        uses: actions/download-artifact@v4
+        with:
+          name: prod-docs
+          path: ./docs-prod
+        continue-on-error: true
+
+      # 🔑 Télécharger les rapports Elementary
+      - name: Download staging Elementary report
+        uses: actions/download-artifact@v4
+        with:
+          name: elementary-staging-report
+          path: ./elementary-staging
+        continue-on-error: true
+
+      - name: Download production Elementary report (if exists)
+        uses: actions/download-artifact@v4
+        with:
+          name: elementary-prod-report
+          path: ./elementary-prod
+        continue-on-error: true
+
+      # Créer la structure complète pour GitHub Pages
+      - name: Prepare docs structure
+        run: |
+          mkdir -p ./public/staging
+          mkdir -p ./public/prod
+          mkdir -p ./public/elementary/staging
+          mkdir -p ./public/elementary/prod
+          
+          # Copier les docs dbt
+          if [ -d "./docs-staging" ]; then
+            cp -r ./docs-staging/* ./public/staging/
+          fi
+          
+          if [ -d "./docs-prod" ]; then
+            cp -r ./docs-prod/* ./public/prod/
+          fi
+          
+          # 🔑 Copier les rapports Elementary
+          if [ -f "./elementary-staging/elementary_staging_report.html" ]; then
+            cp ./elementary-staging/elementary_staging_report.html ./public/elementary/staging/index.html
+            echo "✅ Elementary staging report copied"
+          fi
+          
+          if [ -f "./elementary-prod/elementary_prod_report.html" ]; then
+            cp ./elementary-prod/elementary_prod_report.html ./public/elementary/prod/index.html
+            echo "✅ Elementary prod report copied"
+          fi
+
+       #🔑 Créer une page d'index avec liens vers dbt docs ET Elementary
+      - name: Create index page
+        run: |
+          cat > ./public/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="fr">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Data Documentation - Globe ITW</title>
+              <style>
+                  * {
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
+                  }
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                      padding: 40px 20px;
+                  }
+                  .container {
+                      max-width: 1200px;
+                      margin: 0 auto;
+                  }
+                  .header {
+                      text-align: center;
+                      color: white;
+                      margin-bottom: 50px;
+                  }
+                  .header h1 {
+                      font-size: 3rem;
+                      margin-bottom: 10px;
+                      font-weight: 700;
+                  }
+                  .header p {
+                      font-size: 1.2rem;
+                      opacity: 0.9;
+                  }
+                  .section {
+                      margin-bottom: 50px;
+                  }
+                  .section-title {
+                      color: white;
+                      font-size: 1.8rem;
+                      margin-bottom: 25px;
+                      font-weight: 600;
+                      text-align: center;
+                  }
+                  .cards {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                      gap: 25px;
+                  }
+                  .card {
+                      background: white;
+                      border-radius: 15px;
+                      padding: 35px;
+                      text-align: center;
+                      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+                      transition: transform 0.3s ease, box-shadow 0.3s ease;
+                      text-decoration: none;
+                      color: inherit;
+                      display: block;
+                  }
+                  .card:hover {
+                      transform: translateY(-10px);
+                      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+                  }
+                  .card-icon {
+                      font-size: 3.5rem;
+                      margin-bottom: 15px;
+                  }
+                  .card h2 {
+                      font-size: 1.5rem;
+                      margin-bottom: 10px;
+                      color: #333;
+                  }
+                  .card p {
+                      color: #666;
+                      line-height: 1.6;
+                      font-size: 0.95rem;
+                  }
+                  .dbt-docs {
+                      border-top: 5px solid #ff6b6b;
+                  }
+                  .elementary {
+                      border-top: 5px solid #4ecdc4;
+                  }
+                  .staging {
+                      border-top: 5px solid #f59e0b;
+                  }
+                  .production {
+                      border-top: 5px solid #10b981;
+                  }
+                  .badge {
+                      display: inline-block;
+                      padding: 5px 15px;
+                      border-radius: 20px;
+                      font-size: 0.75rem;
+                      font-weight: 600;
+                      margin-top: 10px;
+                  }
+                  .badge-dbt {
+                      background: #ffe0e0;
+                      color: #c92a2a;
+                  }
+                  .badge-elementary {
+                      background: #d3f9f6;
+                      color: #0b7285;
+                  }
+                  .badge-staging {
+                      background: #fef3c7;
+                      color: #92400e;
+                  }
+                  .badge-prod {
+                      background: #d1fae5;
+                      color: #065f46;
+                  }
+                  .divider {
+                      height: 2px;
+                      background: rgba(255,255,255,0.2);
+                      margin: 40px 0;
+                      border-radius: 2px;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>📊 Data Documentation</h1>
+                      <p>Globe ITW Data Warehouse</p>
+                  </div>
+
+                  <!-- DBT Documentation Section -->
+                  <div class="section">
+                      <h2 class="section-title">📚 DBT Documentation</h2>
+                      <div class="cards">
+                          <a href="./staging/index.html" class="card dbt-docs staging">
+                              <div class="card-icon">🧪</div>
+                              <h2>DBT Staging</h2>
+                              <p>Documentation des modèles, sources et tests de l'environnement de staging.</p>
+                              <span class="badge badge-dbt">DBT</span>
+                              <span class="badge badge-staging">STAGING</span>
+                          </a>
+
+                          <a href="./prod/index.html" class="card dbt-docs production">
+                              <div class="card-icon">🚀</div>
+                              <h2>DBT Production</h2>
+                              <p>Documentation officielle de l'environnement de production.</p>
+                              <span class="badge badge-dbt">DBT</span>
+                              <span class="badge badge-prod">PRODUCTION</span>
+                          </a>
+                      </div>
+                  </div>
+
+                  <div class="divider"></div>
+
+                  <!-- Elementary Reports Section -->
+                  <div class="section">
+                      <h2 class="section-title">🔍 Elementary Data Quality Reports</h2>
+                      <div class="cards">
+                          <a href="./elementary/staging/index.html" class="card elementary staging">
+                              <div class="card-icon">📊</div>
+                              <h2>Elementary Staging</h2>
+                              <p>Rapport de qualité des données et monitoring des tests pour staging.</p>
+                              <span class="badge badge-elementary">ELEMENTARY</span>
+                              <span class="badge badge-staging">STAGING</span>
+                          </a>
+
+                          <a href="./elementary/prod/index.html" class="card elementary production">
+                              <div class="card-icon">✅</div>
+                              <h2>Elementary Production</h2>
+                              <p>Rapport de qualité et observabilité de la production.</p>
+                              <span class="badge badge-elementary">ELEMENTARY</span>
+                              <span class="badge badge-prod">PRODUCTION</span>
+                          </a>
+                      </div>
+                  </div>
+
+                  <div style="text-align: center; color: white; opacity: 0.7; margin-top: 60px; font-size: 0.9rem;">
+                      <p>Mis à jour automatiquement via GitHub Actions</p>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './public'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
