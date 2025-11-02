@@ -2,11 +2,13 @@
 
 
 WITH combined AS (
-SELECT *
+SELECT *,
+       ST_GEOHASH(TO_GEOGRAPHY(CONCAT('POINT(', longitude, ' ', latitude, ')'))) AS geohash
 FROM DTL_EXO.GI.MAGASINS
 UNION
-SELECT *
-FROM DTL_EXO.TH.MAGASINS
+SELECT *,
+       ST_GEOHASH(TO_GEOGRAPHY(CONCAT('POINT(', longitude, ' ', latitude, ')'))) AS geohash
+FROM DTL_EXO.GI.MAGASINS
 )
 
 SELECT
