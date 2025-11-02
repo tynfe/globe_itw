@@ -1,5 +1,5 @@
 globe_itw:
-  target: dev
+  target: staging
   outputs:
     dev:
       type: snowflake
@@ -61,4 +61,18 @@ globe_itw:
       retry_all: False  # default: false
       reuse_connections: True # de
 
-
+elementary:
+  target: default
+  outputs:
+    default:
+      type: snowflake
+      account: "{{ env_var('DBT_ACCOUNT_GLOBE') }}"
+      user: "{{ env_var('DBT_USER_GLOBE') }}"
+      password: "{{ env_var('DBT_PASSWORD_GLOBE') }}"
+      role: ROLE_TYRON_FERREIRAPRO
+      database: DWH_DEV_TYRON
+      warehouse: COMPUTE_WH
+      schema: ETL
+      threads: 4
+      client_session_keep_alive: False
+      query_tag: dbt_elementary
