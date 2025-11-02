@@ -1,4 +1,8 @@
 {{ config(materialized='table') }}
 
+
 SELECT *
 FROM DTL_EXO.GI.MAGASINS
+UNION
+SELECT *
+FROM DTL_EXO.TH.MAGASINS
