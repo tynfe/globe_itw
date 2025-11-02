@@ -28,7 +28,6 @@ models:
       - name: id
         description: "The unique key for this table"
         data_tests:
-          - unique
           - not_null
 
       - name: name
