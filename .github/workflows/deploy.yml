@@ -120,7 +120,7 @@ jobs:
   # STAGING BUILD - Direct sur main
   # ============================================
   dbt_staging_main:
-    name: Staging Build (Main)
+    name: Staging Build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
 
@@ -156,9 +156,8 @@ jobs:
       - name: Generate Elementary Report (Staging)
         run: |
           edr report \
-            --target default \
+            --target-path ./ \
             --profiles-dir ./ \
-            --file-path ./elementary_staging_report.html
         continue-on-error: false
 
       - name: Upload staging docs
@@ -232,6 +231,18 @@ jobs:
             path: ./elementary_prod_report.html
             retention-days: 90
             if: success()
+
+      - name: Cleanup dev schema
+        run: |
+          # Récupérer le nom de la branche depuis le tag
+          BRANCH_NAME=$(git branch -r --contains ${{ github.ref_name }} | grep -v HEAD | head -1 | sed 's/origin\///' | tr '/' '_')
+          DEV_SCHEMA="dev_${GITHUB_ACTOR}_${BRANCH_NAME}"
+
+          echo "🧹 Cleaning up dev schema: ${DEV_SCHEMA}"
+
+          # Drop le schéma dev dans Snowflake
+          dbt run-operation drop_schema --args "{schema_name: ${DEV_SCHEMA}, database: DWH_DEV_TYRON}"
+        continue-on-error: true
 
 
   deploy_docs:
