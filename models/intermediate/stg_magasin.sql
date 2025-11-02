@@ -11,8 +11,4 @@ FROM DTL_EXO.TH.MAGASINS
 
 SELECT
     '{{ run_started_at }}'::timestamp as dbt_updated_at,
-    id,
-    name,
-    latitude,
-    longitude
-FROM combined
+    * from combined

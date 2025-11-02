@@ -135,7 +135,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install dbt-snowflake
+          pip install dbt-snowflake elementary-data
           dbt deps
 
       - name: Build staging
