@@ -14,5 +14,5 @@ SELECT
     id,
     name,
     latitude,
-    longititude
+    longitude
 FROM combined
