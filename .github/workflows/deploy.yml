@@ -156,7 +156,7 @@ jobs:
       - name: Generate Elementary Report (Staging)
         run: |
           edr report \
-            --target-path ./ \
+            --target-path ./elementary_data \
             --profiles-dir ./ \
         continue-on-error: false
 
@@ -171,7 +171,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: elementary-staging-report
-          path: ./elementary_staging_report.html
+          path: ./elementary_data/elementary_report.html
           retention-days: 30
         if: success()
 
@@ -275,26 +275,12 @@ jobs:
           name: staging-docs
           path: ./docs-staging
 
-      - name: Download production docs (if exists)
-        uses: actions/download-artifact@v4
-        with:
-          name: prod-docs
-          path: ./docs-prod
-        continue-on-error: true
-
       # 🔑 Télécharger les rapports Elementary
       - name: Download staging Elementary report
         uses: actions/download-artifact@v4
         with:
           name: elementary-staging-report
           path: ./elementary-staging
-        continue-on-error: true
-
-      - name: Download production Elementary report (if exists)
-        uses: actions/download-artifact@v4
-        with:
-          name: elementary-prod-report
-          path: ./elementary-prod
         continue-on-error: true
 
       # Créer la structure complète pour GitHub Pages
@@ -516,6 +502,8 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        with:
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
