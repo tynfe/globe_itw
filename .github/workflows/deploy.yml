@@ -23,7 +23,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    if: github.ref != 'refs/heads/main'  # Toutes les branches sauf main
+    if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'
 
     steps:
       - name: Checkout
