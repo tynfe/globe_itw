@@ -1,0 +1,88 @@
+# models/staging/sources.yml
+version: 2
+
+sources:
+  - name: gi
+    database: DTL_EXO
+    schema: GI
+    description: "Données des magasins depuis le système GI"
+
+    tables:
+      - name: MAGASINS
+        description: "Table des magasins GI"
+
+        # Freshness monitoring
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+        columns:
+          - name: id
+            description: "Identifiant unique du magasin"
+            tests:
+              - not_null
+              - unique
+
+          - name: name
+            description: "Nom du magasin"
+            tests:
+              - not_null
+
+          - name: latitude
+            description: "Latitude GPS"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: -90
+                  max_value: 90
+
+          - name: longitude
+            description: "Longitude GPS"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: -180
+                  max_value: 180
+
+  - name: ti
+    database: DTL_EXO
+    schema: TH
+    description: "Données des magasins depuis le système TI"
+
+    tables:
+      - name: MAGASINS
+        description: "Table des magasins TI"
+
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+        columns:
+          - name: id
+            description: "Identifiant unique du magasin TI"
+            tests:
+              - not_null
+              - unique
+
+          - name: name
+            description: "Nom du magasin"
+            tests:
+              - not_null
+
+          - name: latitude
+            description: "Latitude GPS"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: -90
+                  max_value: 90
+
+          - name: longitude
+            description: "Longitude GPS"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: -180
+                  max_value: 180

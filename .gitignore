@@ -6,3 +6,4 @@ logs/
 analyses
 .user.yml
 elementary_data/
+edr_target/

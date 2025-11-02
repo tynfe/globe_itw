@@ -2,7 +2,7 @@
 version: 2
 
 models:
-  - name: stg_magasin
+  - name: stg__matchings_stores
     description: "A starter dbt model"
     data_tests:
       - elementary.volume_anomalies: &volume_config
