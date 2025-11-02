@@ -6,8 +6,10 @@ authors = ["tyron ferreira <tyron@MBP-de-tyron.lan>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "3.10.14"
 dbt-snowflake = "^1.10.2"
+dbt-core = "^1.10.13"
+elementary-data = {extras = ["snowflake"], version = "^0.20.0"}
 
 
 [build-system]

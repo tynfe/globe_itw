@@ -4,6 +4,26 @@ version: 2
 models:
   - name: stg_magasin
     description: "A starter dbt model"
+    data_tests:
+      - elementary.volume_anomalies: &volume_config
+            timestamp_column: "dbt_updated_at"
+            time_bucket:
+              period: day
+              count: 14
+      - elementary.freshness_anomalies:
+          timestamp_column: "dbt_updated_at"
+          config:
+            severity: warn
+
+      - elementary.schema_changes_from_baseline:
+          tags: ["elementary"]
+
+      - elementary.schema_changes:
+          tags: [ "elementary" ]
+          config:
+            severity: warn
+
+
     columns:
       - name: id
         description: "The unique key for this table"
