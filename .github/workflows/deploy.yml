@@ -1,0 +1,177 @@
+name: DBT CI/CD with Defer Pattern
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DBT_PROFILES_DIR: ./
+  DBT_SNOWFLAKE_ACCOUNT: ${{ secrets.DBT_SNOWFLAKE_ACCOUNT }}
+  DBT_SNOWFLAKE_PW: ${{ secrets.DBT_SNOWFLAKE_PW }}
+  DBT_USER_GLOBE: ${{ secrets.DBT_USER_GLOBE }}
+  DBT_ACCOUNT_GLOBE: ${{ secrets.DBT_ACCOUNT_GLOBE }}
+  DBT_PASSWORD_GLOBE: ${{ secrets.DBT_PASSWORD_GLOBE }}
+
+jobs:
+  # ============================================
+  # DEV BUILD - Avec defer vers STAGING (Option 2)
+  # ============================================
+  dbt_build_dev:
+    name: Dev Build with Defer
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-snowflake
+          dbt deps
+
+      - name: Set dev schema name
+        run: |
+          # Créer un schéma unique basé sur le numéro de PR et le user
+          echo "DBT_SCHEMA=dbt_pr_${{ github.event.pull_request.number }}_${{ github.actor }}" >> $GITHUB_ENV
+
+      - name: Generate staging manifest (Option 2)
+        run: |
+          echo "================================================"
+          echo "📦 Step 1: Generating staging manifest..."
+          echo "================================================"
+          
+          # Compiler avec le target staging pour avoir l'état de référence
+          dbt compile --target staging
+          
+          # Sauvegarder le manifest staging
+          cp -r target/ staging-state/
+          echo "✅ Staging manifest saved in staging-state/"
+
+      - name: Clean target directory
+        run: |
+          echo "🧹 Step 2: Cleaning target directory..."
+          rm -rf target/*
+
+      - name: Compile with dev target
+        run: |
+          echo "🔨 Step 3: Compiling with dev target..."
+          dbt compile --target dev
+
+      - name: Build modified models only
+        run: |
+          echo "================================================"
+          echo "🚀 Step 4: Building modified models only..."
+          echo "Schema: $DBT_SCHEMA"
+          echo "================================================"
+          
+          # Afficher les modèles qui vont être construits
+          echo "Models to build:"
+          dbt ls --select state:modified+ --state ./staging-state || echo "No models modified"
+          
+          # Build avec defer
+          dbt build \
+            --target dev \
+            --select state:modified+ \
+            --defer \
+            --state ./staging-state
+            
+          echo "✅ Modified models → $DBT_SCHEMA"
+          echo "✅ Unchanged models → deferred to ETL schema"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-artifacts-${{ github.run_id }}
+          path: |
+            target/
+            logs/
+          retention-days: 3
+
+  # ============================================
+  # STAGING BUILD - Branche main
+  # ============================================
+  dbt_build_staging:
+    name: Staging Build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-snowflake
+          dbt deps
+
+      - name: Build staging
+        env:
+          DBT_DATABASE: DHW_DEV_TYRON
+          DBT_SCHEMA: ETL
+        run: |
+          echo "📦 Building STAGING in schema: ETL"
+          dbt build --target staging
+          dbt docs generate --target staging
+
+      - name: Upload staging artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-artifacts-${{ github.sha }}
+          path: target/
+          retention-days: 7
+
+  # ============================================
+  # PRODUCTION BUILD - Tags uniquement
+  # ============================================
+  dbt_build_prod:
+    name: Production Deployment
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production  # Protection GitHub pour prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-snowflake
+          dbt deps
+
+      - name: Deploy to production
+        env:
+          DBT_DATABASE: DHW_PROD_TYRON
+          DBT_SCHEMA: PROD
+        run: |
+          echo "🚀 Deploying to PRODUCTION - Tag: ${{ github.ref_name }}"
+          dbt seed --target prod --full-refresh
+          dbt build --target prod --full-refresh
+          dbt docs generate --target prod
+
+      - name: Upload production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-artifacts-${{ github.ref_name }}
+          path: target/
+          retention-days: 90
