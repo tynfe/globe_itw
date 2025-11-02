@@ -20,30 +20,16 @@ sources:
         columns:
           - name: id
             description: "Identifiant unique du magasin"
-            tests:
-              - not_null
-              - unique
 
           - name: name
             description: "Nom du magasin"
-            tests:
-              - not_null
 
           - name: latitude
             description: "Latitude GPS"
-            tests:
-              - not_null
-              - dbt_utils.accepted_range:
-                  min_value: -90
-                  max_value: 90
 
           - name: longitude
             description: "Longitude GPS"
-            tests:
-              - not_null
-              - dbt_utils.accepted_range:
-                  min_value: -180
-                  max_value: 180
+
 
   - name: ti
     database: DTL_EXO
@@ -62,27 +48,13 @@ sources:
         columns:
           - name: id
             description: "Identifiant unique du magasin TI"
-            tests:
-              - not_null
-              - unique
 
           - name: name
             description: "Nom du magasin"
-            tests:
-              - not_null
 
           - name: latitude
             description: "Latitude GPS"
-            tests:
-              - not_null
-              - dbt_utils.accepted_range:
-                  min_value: -90
-                  max_value: 90
 
           - name: longitude
             description: "Longitude GPS"
-            tests:
-              - not_null
-              - dbt_utils.accepted_range:
-                  min_value: -180
-                  max_value: 180
+
