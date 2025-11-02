@@ -275,26 +275,12 @@ jobs:
           name: staging-docs
           path: ./docs-staging
 
-      - name: Download production docs (if exists)
-        uses: actions/download-artifact@v4
-        with:
-          name: prod-docs
-          path: ./docs-prod
-        continue-on-error: true
-
       # 🔑 Télécharger les rapports Elementary
       - name: Download staging Elementary report
         uses: actions/download-artifact@v4
         with:
           name: elementary-staging-report
           path: ./elementary-staging
-        continue-on-error: true
-
-      - name: Download production Elementary report (if exists)
-        uses: actions/download-artifact@v4
-        with:
-          name: elementary-prod-report
-          path: ./elementary-prod
         continue-on-error: true
 
       # Créer la structure complète pour GitHub Pages
