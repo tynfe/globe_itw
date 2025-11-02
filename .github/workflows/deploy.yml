@@ -301,14 +301,9 @@ jobs:
           fi
           
           # 🔑 Copier les rapports Elementary
-          if [ -f "./elementary-staging/elementary_staging_report.html" ]; then
-            cp ./elementary-staging/elementary_staging_report.html ./public/elementary/staging/index.html
+          if [ -f "./elementary-staging/elementary_report.html" ]; then
+            cp ./elementary-staging/elementary_report.html ./public/elementary/staging/index.html
             echo "✅ Elementary staging report copied"
-          fi
-          
-          if [ -f "./elementary-prod/elementary_prod_report.html" ]; then
-            cp ./elementary-prod/elementary_prod_report.html ./public/elementary/prod/index.html
-            echo "✅ Elementary prod report copied"
           fi
 
        #🔑 Créer une page d'index avec liens vers dbt docs ET Elementary
