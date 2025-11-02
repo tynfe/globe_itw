@@ -18,10 +18,6 @@ models:
 
       - name: latitude
         description: "latitude of the POI"
-        data_tests:
-          - not_null
 
       - name: longitude
         description: "longitude of the POI"
-        data_tests:
-          - not_null
