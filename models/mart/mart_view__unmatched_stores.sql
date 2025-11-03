@@ -1,4 +1,3 @@
--- models/marts/vw__unmatched_stores_diagnostics.sql
 {{
     config(
         materialized='view'
@@ -15,6 +14,8 @@ WITH unmatched_stores AS (
         th_name_cleaned,
         gi_name_hash,
         th_name_hash,
+        geohash_1200m,
+        geohash_150m,
         gi_original_id,
         th_original_id,
         record_status,
@@ -35,20 +36,24 @@ gi_candidates_base AS (
         u.gi_name_hash,
         u.record_status,
         u.updated_at,
+        u.geohash_1200m,
+        u.geohash_150m,
 
-        th.name as closest_th_name,
-        th.name_cleaned as closest_th_name_cleaned,
-        th.name_hash as closest_th_name_hash,
-        th.latitude as closest_th_lat,
-        th.longitude as closest_th_lon,
-        th.original_id as closest_th_id,
+        th.name AS closest_th_name,
+        th.name_cleaned AS closest_th_name_cleaned,
+        th.name_hash AS closest_th_name_hash,
+        th.latitude AS closest_th_lat,
+        th.longitude AS closest_th_lon,
+        th.original_id AS closest_th_id,
+        th.geohash_1200m AS closest_geohash_1200m,
+        th.geohash_150m AS closest_geohash_150m,
 
         -- Calculs de base
-        JAROWINKLER_SIMILARITY(u.gi_name_cleaned, th.name_cleaned) as name_similarity_score,
+        JAROWINKLER_SIMILARITY(u.gi_name_cleaned, th.name_cleaned) AS name_similarity_score,
         ST_DISTANCE(
             TO_GEOGRAPHY(CONCAT('POINT(', u.longitude, ' ', u.latitude, ')')),
             TO_GEOGRAPHY(CONCAT('POINT(', th.longitude, ' ', th.latitude, ')'))
-        ) as distance_meters
+        ) AS distance_meters
 
     FROM unmatched_stores u
     CROSS JOIN {{ ref('raw__th_stores') }} th
@@ -67,12 +72,12 @@ gi_unmatched_with_candidates AS (
             name_hash_2='closest_th_name_hash',
             name_similarity='name_similarity_score',
             distance_meters='distance_meters'
-        ) }} as potential_match_score,
+        ) }} AS potential_match_score,
 
         ROW_NUMBER() OVER (
             PARTITION BY store_id
             ORDER BY distance_meters ASC
-        ) as candidate_rank
+        ) AS candidate_rank
     FROM gi_candidates_base
     QUALIFY candidate_rank <= 3
 ),
@@ -87,19 +92,23 @@ th_candidates_base AS (
         u.th_name_hash,
         u.record_status,
         u.updated_at,
+        u.geohash_1200m,
+        u.geohash_150m,
 
-        gi.name as closest_gi_name,
-        gi.name_cleaned as closest_gi_name_cleaned,
-        gi.name_hash as closest_gi_name_hash,
-        gi.latitude as closest_gi_lat,
-        gi.longitude as closest_gi_lon,
-        gi.original_id as closest_gi_id,
+        gi.name AS closest_gi_name,
+        gi.name_cleaned AS closest_gi_name_cleaned,
+        gi.name_hash AS closest_gi_name_hash,
+        gi.latitude AS closest_gi_lat,
+        gi.longitude AS closest_gi_lon,
+        gi.original_id AS closest_gi_id,
+        gi.geohash_1200m AS closest_geohash_1200m,
+        gi.geohash_150m AS  closest_geohash_150m,
 
-        JAROWINKLER_SIMILARITY(u.th_name_cleaned, gi.name_cleaned) as name_similarity_score,
+        JAROWINKLER_SIMILARITY(u.th_name_cleaned, gi.name_cleaned) AS name_similarity_score,
         ST_DISTANCE(
             TO_GEOGRAPHY(CONCAT('POINT(', u.longitude, ' ', u.latitude, ')')),
             TO_GEOGRAPHY(CONCAT('POINT(', gi.longitude, ' ', gi.latitude, ')'))
-        ) as distance_meters
+        ) AS distance_meters
 
     FROM unmatched_stores u
     CROSS JOIN {{ ref('raw__gi_stores') }} gi
@@ -118,12 +127,12 @@ th_unmatched_with_candidates AS (
             name_hash_2='closest_gi_name_hash',
             name_similarity='name_similarity_score',
             distance_meters='distance_meters'
-        ) }} as potential_match_score,
+        ) }} AS potential_match_score,
 
         ROW_NUMBER() OVER (
             PARTITION BY store_id
             ORDER BY distance_meters ASC
-        ) as candidate_rank
+        ) AS candidate_rank
     FROM th_candidates_base
     QUALIFY candidate_rank <= 3
 ),
@@ -133,17 +142,26 @@ all_diagnostics AS (
     -- GI non matchés
     SELECT
         store_id,
-        'GI_ONLY' as source,
-        store_name as unmatched_name,
-        gi_name_cleaned as unmatched_name_cleaned,
-        latitude as unmatched_lat,
-        longitude as unmatched_lon,
+        'GI_ONLY' AS source,
+        store_name AS unmatched_name,
+        gi_name_cleaned AS unmatched_name_cleaned,
+        gi_name_hash AS unmatched_name_hash,
 
-        closest_th_name as closest_candidate_name,
-        closest_th_name_cleaned as closest_candidate_name_cleaned,
-        closest_th_lat as closest_candidate_lat,
-        closest_th_lon as closest_candidate_lon,
-        closest_th_id as closest_candidate_id,
+        latitude AS unmatched_lat,
+        longitude AS unmatched_lon,
+
+        geohash_1200m AS unmatched_geohash_1200m,
+        geohash_150m AS unmatched_geohash_150m,
+
+        closest_geohash_1200m,
+        closest_geohash_150m,
+
+        closest_th_name AS closest_candidate_name,
+        closest_th_name_cleaned AS closest_candidate_name_cleaned,
+        closest_th_name_hash AS closest_candidate_name_hash,
+        closest_th_lat AS closest_candidate_lat,
+        closest_th_lon AS closest_candidate_lon,
+        closest_th_id AS closest_candidate_id,
 
         candidate_rank,
         name_similarity_score,
@@ -154,13 +172,13 @@ all_diagnostics AS (
             score_column='potential_match_score',
             name_similarity_column='name_similarity_score',
             distance_column='distance_meters'
-        ) }} as failure_reason,
+        ) }} AS failure_reason,
 
         {{ suggest_match_action(
             score_column='potential_match_score',
             name_similarity_column='name_similarity_score',
             distance_column='distance_meters'
-        ) }} as suggestion,
+        ) }} AS suggestion,
 
         updated_at
 
@@ -171,17 +189,26 @@ all_diagnostics AS (
     -- TH non matchés
     SELECT
         store_id,
-        'TH_ONLY' as source,
-        store_name as unmatched_name,
-        th_name_cleaned as unmatched_name_cleaned,
-        latitude as unmatched_lat,
-        longitude as unmatched_lon,
+        'TH_ONLY' AS source,
+        store_name AS unmatched_name,
+        th_name_cleaned AS unmatched_name_cleaned,
+        th_name_hash AS unmatched_name_hash,
 
-        closest_gi_name as closest_candidate_name,
-        closest_gi_name_cleaned as closest_candidate_name_cleaned,
-        closest_gi_lat as closest_candidate_lat,
-        closest_gi_lon as closest_candidate_lon,
-        closest_gi_id as closest_candidate_id,
+        latitude AS unmatched_lat,
+        longitude AS unmatched_lon,
+
+        closest_geohash_1200m,
+        closest_geohash_150m,
+        geohash_1200m AS unmatched_geohash_1200m,
+        geohash_150m AS unmatched_geohash_150m,
+
+        closest_gi_name AS closest_candidate_name,
+        closest_gi_name_cleaned AS closest_candidate_name_cleaned,
+        closest_gi_name_hash AS closest_candidate_name_hash,
+
+        closest_gi_lat AS closest_candidate_lat,
+        closest_gi_lon AS closest_candidate_lon,
+        closest_gi_id AS closest_candidate_id,
 
         candidate_rank,
         name_similarity_score,
@@ -192,13 +219,13 @@ all_diagnostics AS (
             score_column='potential_match_score',
             name_similarity_column='name_similarity_score',
             distance_column='distance_meters'
-        ) }} as failure_reason,
+        ) }} AS failure_reason,
 
         {{ suggest_match_action(
             score_column='potential_match_score',
             name_similarity_column='name_similarity_score',
             distance_column='distance_meters'
-        ) }} as suggestion,
+        ) }} AS suggestion,
 
         updated_at
 
@@ -210,24 +237,29 @@ SELECT
     source,
     unmatched_name,
     unmatched_name_cleaned,
+    unmatched_name_hash,
     unmatched_lat,
     unmatched_lon,
-
+    unmatched_geohash_1200m,
+    unmatched_geohash_150m,
+    closest_geohash_1200m,
+    closest_geohash_150m,
     candidate_rank,
     closest_candidate_name,
     closest_candidate_name_cleaned,
+    closest_candidate_name_hash,
     closest_candidate_id,
     closest_candidate_lat,
     closest_candidate_lon,
 
-    ROUND(name_similarity_score, 2) as name_similarity_score,
-    ROUND(distance_meters, 0) as distance_meters,
-    ROUND(potential_match_score, 2) as potential_match_score,
+    ROUND(name_similarity_score, 2) AS name_similarity_score,
+    ROUND(distance_meters, 0) AS distance_meters,
+    ROUND(potential_match_score, 2) AS potential_match_score,
 
     failure_reason,
     suggestion,
 
-    ROUND(80 - potential_match_score, 2) as score_gap_to_threshold,
+    ROUND(80 - potential_match_score, 2) AS score_gap_to_threshold,
 
     updated_at
 

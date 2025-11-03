@@ -25,6 +25,7 @@ WITH match_candidates AS (
         gi.latitude as gi_lat,
         gi.longitude as gi_lon,
         gi.geohash_150m AS gi_geohash_150m,
+        gi.geohash_1200m AS gi_geohash_1200m,
         gi.updated_at as gi_updated_at,
 
         th.generated_id as th_generated_id,
@@ -48,10 +49,10 @@ WITH match_candidates AS (
     INNER JOIN {{ ref('raw__th_stores') }} th
         ON gi.geohash_1200m = th.geohash_1200m
 
+
     {% if is_incremental() %}
-    WHERE
-        gi.updated_at > (SELECT COALESCE(MAX(updated_at), '1970-01-01') FROM {{ this }})
-        OR th.updated_at > (SELECT COALESCE(MAX(updated_at), '1970-01-01') FROM {{ this }})
+    WHERE gi.updated_at > (SELECT MAX(updated_at) FROM {{ this }})
+        OR th.updated_at > (SELECT MAX(updated_at) FROM {{ this }})
     {% endif %}
 ),
 
@@ -85,12 +86,15 @@ matched_stores AS (
         gi_name AS store_name,
         gi_lat AS latitude,
         gi_lon AS longitude,
+        th_lat as closest_lat,
+        th_lon as closest_lon,
         gi_name_cleaned,
         th_name_cleaned,
         th_name_hash,
         gi_name_hash,
         distance_meters,
         gi_geohash_150m AS geohash_150m,
+        gi_geohash_1200m AS geohash_1200m,
         gi_original_id,
         th_original_id,
         name_similarity,
@@ -107,12 +111,15 @@ gi_only_stores AS (
         name as store_name,
         latitude,
         longitude,
+        NULL AS closest_lat,
+        NULL AS closest_lon,
         name_cleaned AS gi_name_cleaned,
         NULL AS th_name_cleaned,
         NULL AS th_name_hash,
         name_hash AS gi_name_hash,
         NULL AS distance_meters,
         geohash_150m AS geohash_150m,
+        geohash_1200m AS geohash_1200m,
         original_id AS gi_original_id,
         NULL AS th_original_id,
         NULL AS name_similarity,
@@ -135,12 +142,15 @@ th_only_stores AS (
         name AS store_name,
         latitude,
         longitude,
+        NULL AS closest_lat,
+        NULL AS closest_lon,
         NULL AS gi_name_cleaned,
         name_cleaned AS th_name_cleaned,
         name_hash AS th_name_hash,
         NULL AS gi_name_hash,
         NULL AS distance_meters,
         geohash_150m AS geohash_150m,
+        geohash_1200m AS geohash_1200m,
         NULL AS gi_original_id,
         original_id AS th_original_id,
         NULL AS name_similarity,
@@ -152,7 +162,7 @@ th_only_stores AS (
         SELECT th_generated_id FROM best_matches WHERE th_generated_id IS NOT NULL
     )
     {% if is_incremental() %}
-        AND updated_at > (SELECT COALESCE(MAX(updated_at), '1970-01-01') FROM {{ this }})
+        AND updated_at > (SELECT MAX(updated_at) FROM {{ this }})
     {% endif %}
 ),
 
@@ -175,17 +185,20 @@ enriched_stores AS (
         store_name,
         latitude,
         longitude,
+        closest_lon,
+        closest_lat,
         gi_name_cleaned,
         th_name_cleaned,
         th_name_hash,
         gi_name_hash,
         distance_meters,
-
         gi_original_id,
         th_original_id,
         name_similarity,
         match_score,
         record_status,
+        geohash_1200m,
+        geohash_150m,
 
         -- Data quality flag
         CASE
