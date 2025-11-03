@@ -5,7 +5,7 @@ sources:
   - name: gi
     database: DTL_EXO
     schema: GI
-    description: "Données des magasins depuis le système GI"
+    description: "Données des magasins depuis le schema GI"
 
     tables:
       - name: MAGASINS
@@ -31,10 +31,10 @@ sources:
             description: "Longitude GPS"
 
 
-  - name: ti
+  - name: th
     database: DTL_EXO
     schema: TH
-    description: "Données des magasins depuis le système TI"
+    description: "Données des magasins depuis le schema TH"
 
     tables:
       - name: MAGASINS

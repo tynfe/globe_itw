@@ -13,18 +13,18 @@ WITH source_data AS (
         MD5({{ clean_store_name('name') }}) AS name_hash,
         ST_GEOHASH(TO_GEOGRAPHY(CONCAT('POINT(', longitude, ' ', latitude, ')')), 6) AS geohash_1200m,
         ST_GEOHASH(TO_GEOGRAPHY(CONCAT('POINT(', longitude, ' ', latitude, ')')), 7) AS geohash_150m,
-        'GI' as source,
+        'TH' as source,
 
         MD5(CONCAT(
-        CAST(id AS VARCHAR), geohash_150m
-        )) AS generated_id
+            CAST(id AS VARCHAR), geohash_150m
+        )) as generated_id
 
-    FROM {{ source('gi', 'MAGASINS') }}
+    FROM {{ source('th', 'MAGASINS') }}
 )
 
 SELECT
     generated_id,
-    id AS original_id,
+    CAST(id AS VARCHAR) AS original_id,
     name,
     name_cleaned,
     name_hash,
@@ -33,7 +33,7 @@ SELECT
     latitude,
     longitude,
     source,
-    CURRENT_TIMESTAMP() AS updated_at
+    CURRENT_TIMESTAMP() as updated_at
 FROM source_data
 
 {% if is_incremental() %}

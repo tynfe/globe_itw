@@ -34,6 +34,6 @@
         {% endset %}
 
         {% do run_query(query) %}
-        {% do log("✅ Metadata captured for " ~ this.name, info=true) %}
+        {% do log("✅ capture metadata logger: metadata captured for " ~ this.name, info=true) %}
     {% endif %}
 {% endmacro %}
