@@ -244,7 +244,7 @@ WHERE
 SELECT
     *,
     'INITIAL_LOAD' as change_type,
-    NULL::TIMESTAMP_NTZ as previous_updated_at
+    NULL::TIMESTAMP_LTZ as previous_updated_at
 
 FROM enriched_stores
 {% endif %}
