@@ -227,7 +227,7 @@ SELECT
         WHEN existing.latitude != es.latitude OR existing.longitude != es.longitude THEN 'LOCATION_CHANGED'
         ELSE 'NO_CHANGE'
     END as change_type,
-    existing.dbt_updated_at as previous_updated_at
+    existing.updated_at as previous_updated_at
 FROM enriched_stores es
 LEFT JOIN {{ this }} existing
     ON es.store_id = existing.store_id
@@ -244,6 +244,7 @@ WHERE
 SELECT
     *,
     'INITIAL_LOAD' as change_type,
-    NULL::timestamp as previous_updated_at
+    NULL::TIMESTAMP_NTZ as previous_updated_at
+
 FROM enriched_stores
 {% endif %}
