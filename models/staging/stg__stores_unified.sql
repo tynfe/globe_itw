@@ -166,7 +166,6 @@ th_only_stores AS (
     {% endif %}
 ),
 
--- Union de tous les stores
 all_stores AS (
     SELECT * FROM matched_stores
     UNION ALL
@@ -209,9 +208,7 @@ enriched_stores AS (
             WHEN record_status = 'TH_ONLY' THEN 'MISSING_IN_GI'
         END as data_quality_flag,
 
-        updated_at,
-        '{{ run_started_at }}'::timestamp as dbt_updated_at,
-        CURRENT_DATE() as process_date
+        updated_at
     FROM all_stores
 )
 

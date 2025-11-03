@@ -259,8 +259,6 @@ SELECT
     failure_reason,
     suggestion,
 
-    ROUND(80 - potential_match_score, 2) AS score_gap_to_threshold,
-
     updated_at
 
 FROM all_diagnostics

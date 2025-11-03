@@ -1,38 +1,201 @@
-
 version: 2
 
 models:
-  - name: stg__matchings_stores
-    description: "A starter dbt model"
-#    data_tests:
-#      - elementary.volume_anomalies: &volume_config
-#            timestamp_column: "dbt_updated_at"
-#            time_bucket:
-#              period: day
-#              count: 14
-#      - elementary.freshness_anomalies:
-#          timestamp_column: "dbt_updated_at"
-#          config:
-#            severity: warn
-#
-#      - elementary.schema_changes_from_baseline:
-#          tags: ["elementary"]
-#
-#      - elementary.schema_changes:
-#          tags: [ "elementary" ]
-#          config:
-#            severity: warn
-
+  - name: stg__stores_unified
+    description: "Table unifiée des magasins avec matching entre GI et TH"
 
     columns:
-      - name: id
-        description: "The unique key for this table"
+      - name: store_id
+        description: "Identifiant unique du store (composite ou préfixé)"
+        tests:
+          - unique
+          - not_null
 
-      - name: name
-        description: "name of the poi"
+      - name: store_name
+        description: "Nom du magasin"
+        tests:
+          - not_null
+          - elementary.column_anomalies:
+              column_anomalies:
+                - null_count
+                - null_percent
 
       - name: latitude
-        description: "latitude of the POI"
+        description: "Latitude du magasin"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: -90
+              max_value: 90
+              config:
+                severity: error
+          - elementary.column_anomalies:
+              column_anomalies:
+                - zero_count
+                - min
+                - max
 
       - name: longitude
-        description: "longitude of the POI"
+        description: "Longitude du magasin"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: -180
+              max_value: 180
+              config:
+                severity: error
+          - elementary.column_anomalies:
+              column_anomalies:
+                - zero_count
+                - min
+                - max
+
+      - name: match_score
+        description: "Score de matching (0-100)"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+              config:
+                severity: error
+          - elementary.column_anomalies:
+              column_anomalies:
+                - average
+                - min
+                - max
+                - zero_count
+              timestamp_column: "updated_at"
+              where_expression: "record_status = 'MATCHED'"
+
+      - name: record_status
+        description: "Statut du matching: MATCHED, GI_ONLY, TH_ONLY"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['MATCHED', 'GI_ONLY', 'TH_ONLY']
+          - elementary.column_anomalies:
+              column_anomalies:
+                - missing_count
+                - missing_percent
+              timestamp_column: "updated_at"
+
+      - name: distance_meters
+        description: "Distance entre les 2 stores matchés (en mètres)"
+        tests:
+          - elementary.column_anomalies:
+              column_anomalies:
+                - average
+                - max
+                - stddev
+              timestamp_column: "updated_at"
+              where_expression: "record_status = 'MATCHED'"
+
+      - name: gi_original_id
+        description: "ID original du store GI"
+        tests:
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              row_condition: "record_status IN ('MATCHED', 'GI_ONLY')"
+              config:
+                severity: warn
+
+      - name: th_original_id
+        description: "ID original du store TH"
+        tests:
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              row_condition: "record_status IN ('MATCHED', 'TH_ONLY')"
+              config:
+                severity: warn
+
+      - name: data_quality_flag
+        description: "Flag de qualité: PERFECT_MATCH, HIGH_CONFIDENCE, etc."
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - 'PERFECT_MATCH'
+                - 'HIGH_CONFIDENCE'
+                - 'MEDIUM_CONFIDENCE'
+                - 'MISSING_IN_TH'
+                - 'MISSING_IN_GI'
+          - elementary.column_anomalies:
+              column_anomalies:
+                - missing_count
+              timestamp_column: "updated_at"
+
+
+      - name: updated_at
+        description: "Date de dernière mise à jour"
+        tests:
+          - not_null
+          - elementary.column_anomalies:
+              column_anomalies:
+                - null_count
+              timestamp_column: "updated_at"
+
+    tests:
+      # 🔢 Test de volumétrie
+      - elementary.volume_anomalies:
+          timestamp_column: "updated_at"
+          where_expression: "record_status = 'MATCHED'"
+
+      - elementary.volume_anomalies:
+          timestamp_column: "updated_at"
+          where_expression: "record_status = 'GI_ONLY'"
+
+      - elementary.volume_anomalies:
+          timestamp_column: "updated_at"
+          where_expression: "record_status = 'TH_ONLY'"
+
+      # 📉 Alerte si trop peu de matchs (min 100 matchs)
+      - dbt_utils.expression_is_true:
+          name: minimum_matched_stores
+          expression: "(SELECT COUNT(*) FROM {{ ref('stg__stores_unified') }} WHERE record_status = 'MATCHED') > 100"
+          config:
+            severity: warn
+
+      # Alerte si taux de matching trop faible (>50%)
+      - dbt_utils.expression_is_true:
+          name: matching_rate_threshold
+          expression: |
+            (
+              SELECT 
+                COUNT(CASE WHEN record_status = 'MATCHED' THEN 1 END) * 1.0 / 
+                NULLIF(COUNT(*), 0)
+              FROM {{ ref('stg__stores_unified') }}
+            ) > 0.50
+          config:
+            severity: warn
+
+      # Vérifier que le score moyen des MATCHED est bon (>=85)
+      - dbt_utils.expression_is_true:
+          name: avg_match_score_quality
+          expression: |
+            (
+              SELECT AVG(match_score) 
+              FROM {{ ref('stg__stores_unified') }}
+              WHERE record_status = 'MATCHED'
+            ) >= 85
+          config:
+            severity: warn
+
+      # Aucune coordonnée (0,0)
+      - dbt_utils.expression_is_true:
+          name: no_zero_coordinates
+          expression: |
+            (
+              SELECT COUNT(*) 
+              FROM {{ ref('stg__stores_unified') }}
+              WHERE latitude = 0 OR longitude = 0
+            ) = 0
+          config:
+            severity: error
+
+      # Pas de doublons géographiques exacts
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - latitude
+            - longitude
+            - store_name
+          config:
+            severity: warn

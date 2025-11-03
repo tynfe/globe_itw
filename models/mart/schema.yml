@@ -1,0 +1,266 @@
+version: 2
+
+models:
+  # ============================================
+  # VUE : STORES MATCHÉS
+  # ============================================
+  - name: mart__stores_matched
+    description: "Vue filtrée contenant uniquement les magasins correctement matchés entre GI et TH"
+
+    columns:
+      - name: store_id
+        description: "Identifiant unique du store matché"
+        tests:
+          - unique
+          - not_null
+
+      - name: store_name
+        description: "Nom du magasin"
+        tests:
+          - not_null
+
+      - name: latitude
+        description: "Latitude du magasin"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: -90
+              max_value: 90
+
+      - name: longitude
+        description: "Longitude du magasin"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: -180
+              max_value: 180
+
+    tests:
+      # ✅ Vérifier que la vue contient uniquement des matchs
+      - dbt_utils.expression_is_true:
+          name: only_matched_records
+          expression: "(SELECT COUNT(*) FROM {{ ref('mart__stores_matched') }}) > 0"
+          config:
+            severity: warn
+
+      # ✅ Pas de coordonnées (0,0)
+      - dbt_utils.expression_is_true:
+          name: no_zero_coordinates_matched
+          expression: |
+            (SELECT COUNT(*) FROM {{ ref('mart__stores_matched') }} 
+             WHERE latitude = 0 OR longitude = 0) = 0
+          config:
+            severity: error
+
+  # ============================================
+  # VUE : DIAGNOSTIC DES NON-MATCHÉS
+  # ============================================
+  - name: mart__view__unmatched_stores
+    description: "Vue de diagnostic pour analyser les magasins non matchés et identifier les candidats potentiels"
+
+    columns:
+      - name: store_id
+        description: "Identifiant du store non matché"
+        tests:
+          - not_null
+
+      - name: source
+        description: "Source du store non matché (GI_ONLY ou TH_ONLY)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['GI_ONLY', 'TH_ONLY']
+
+      - name: unmatched_name
+        description: "Nom du magasin non matché"
+
+      - name: unmatched_lat
+        description: "Latitude du magasin non matché"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: -90
+              max_value: 90
+
+      - name: unmatched_lon
+        description: "Longitude du magasin non matché"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: -180
+              max_value: 180
+
+      - name: candidate_rank
+        description: "Rang du candidat potentiel (1 = le plus proche)"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 3
+              config:
+                severity: warn
+
+      - name: closest_candidate_name
+        description: "Nom du candidat le plus proche"
+
+      - name: closest_candidate_lat
+        description: "Latitude du candidat"
+
+      - name: closest_candidate_lon
+        description: "Longitude du candidat"
+
+      - name: name_similarity_score
+        description: "Score de similarité des noms (0-100)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+          # 📊 Monitoring de la distribution des scores
+          - elementary.column_anomalies:
+              column_anomalies:
+                - average
+                - min
+                - max
+                - stddev
+              timestamp_column: "updated_at"
+
+      - name: distance_meters
+        description: "Distance en mètres entre le store et le candidat"
+        tests:
+          # ⚠️ Alerte si distances anormalement grandes
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 5000
+              config:
+                severity: warn
+          - elementary.column_anomalies:
+              column_anomalies:
+                - average
+                - max
+                - min
+              timestamp_column: "updated_at"
+
+      - name: potential_match_score
+        description: "Score potentiel de matching calculé (0-100)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+          # 📈 Monitoring des scores potentiels
+          - elementary.column_anomalies:
+              column_anomalies:
+                - average
+                - min
+                - max
+              timestamp_column: "updated_at"
+
+      - name: failure_reason
+        description: "Raison principale de l'échec du matching"
+        tests:
+          - accepted_values:
+              values:
+                - 'NAME_TOO_DIFFERENT'
+                - 'DISTANCE_TOO_FAR'
+                - 'LOW_COMBINED_SCORE'
+                - 'NO_GEOHASH_MATCH'
+                - 'MULTIPLE_ISSUES'
+              config:
+                severity: warn
+          # 📊 Distribution des raisons d'échec
+          - elementary.column_anomalies:
+              column_anomalies:
+                - missing_count
+              timestamp_column: "updated_at"
+
+      - name: suggestion
+        description: "Action suggérée pour résoudre le problème"
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - 'REVIEW_MANUALLY'
+                - 'CHECK_NAME_VARIANTS'
+                - 'VERIFY_COORDINATES'
+                - 'LIKELY_NEW_STORE'
+                - 'POTENTIAL_MATCH'
+                - 'INCREASE_DISTANCE_THRESHOLD'
+              config:
+                severity: warn
+
+
+    tests:
+      # 🔢 Volumétrie par source
+      - elementary.volume_anomalies:
+          timestamp_column: "updated_at"
+          where_expression: "source = 'GI_ONLY'"
+
+      - elementary.volume_anomalies:
+          timestamp_column: "updated_at"
+          where_expression: "source = 'TH_ONLY'"
+
+      # 🎯 Identifier les "near miss" (score entre 70 et 80)
+      - dbt_utils.expression_is_true:
+          name: near_miss_candidates_exist
+          expression: |
+            (SELECT COUNT(*) FROM {{ ref('mart__view__unmatched_stores') }}
+             WHERE potential_match_score BETWEEN 70 AND 80
+             AND candidate_rank = 1) >= 0
+          config:
+            severity: warn
+
+      # 📍 Vérifier la cohérence géographique (distance < 5km)
+      - dbt_utils.expression_is_true:
+          name: distance_within_threshold
+          expression: |
+            (SELECT COUNT(*) FROM {{ ref('mart__view__unmatched_stores') }}
+             WHERE distance_meters > 5000) = 0
+          config:
+            severity: error
+
+      # 🚨 Alerte si trop de stores avec score élevé non matchés
+      - dbt_utils.expression_is_true:
+          name: high_score_unmatched_alert
+          expression: |
+            (SELECT COUNT(*) FROM {{ ref('mart__view__unmatched_stores') }}
+             WHERE potential_match_score >= 75 
+             AND candidate_rank = 1) < 50
+          config:
+            severity: warn
+
+      # 📊 Distribution des raisons d'échec
+      - dbt_utils.expression_is_true:
+          name: failure_reasons_tracked
+          expression: |
+            (SELECT COUNT(DISTINCT failure_reason) 
+             FROM {{ ref('mart__view__unmatched_stores') }}) >= 1
+          config:
+            severity: warn
+
+      # 🔍 Vérifier que chaque store a au moins 1 candidat
+      - dbt_utils.expression_is_true:
+          name: all_stores_have_candidates
+          expression: |
+            (SELECT COUNT(DISTINCT store_id) 
+             FROM {{ ref('mart__view__unmatched_stores') }}) > 0
+          config:
+            severity: warn
+
+      # 🎯 Top candidats avec bon score mais non matchés
+      - dbt_utils.expression_is_true:
+          name: review_top_candidates
+          expression: |
+            (SELECT COUNT(*) FROM {{ ref('mart__view__unmatched_stores') }}
+             WHERE candidate_rank = 1 
+             AND potential_match_score >= 70
+             AND suggestion = 'REVIEW_MANUALLY') < 100
+          config:
+            severity: warn
+
+      # ⚠️ Alerte si beaucoup de stores sans bon candidat
+      - dbt_utils.expression_is_true:
+          name: stores_without_good_candidates
+          expression: |
+            (SELECT 
+              COUNT(CASE WHEN potential_match_score < 50 AND candidate_rank = 1 THEN 1 END) * 1.0 /
+              NULLIF(COUNT(DISTINCT store_id), 0)
+             FROM {{ ref('mart__view__unmatched_stores') }}) < 0.70
+          config:
+            severity: warn
