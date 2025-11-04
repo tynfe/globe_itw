@@ -1,18 +1,14 @@
-Welcome to your new dbt project!
-
-
-![Architecture du pipeline](diagram.svg)
+# Globe ITW 
 
 
 # Cataloguing / Linéage / Quality / Monitoring 
 
 voici le lien  https://tynfe.github.io/globe_itw/ des pages de documentation de l'ETL ainsi que le suivi des metrics de tests pour chaque env 
 staging ou production qui host: 
-- lien de la documentation du projet DBT 
-- lien de la page de test / test de qualité / freshness / anomalies 
+- lien de la documentation du projet DBT : https://tynfe.github.io/globe_itw/staging/dbt/index.html#!/model/model.globe_itw.mart__view__matched_stores
+- lien pour les metrics : https://tynfe.github.io/globe_itw/staging/elementary/index.html#/report/dashboard
 
 
-# Globe ITW 
 ## Vue d’ensemble
 
 Globe ITW est un système de réconciliation et d’unification de référentiels magasins multi-sources.
@@ -24,9 +20,14 @@ TH magasins : source complémentaire
 Le pipeline DBT met en œuvre un algorithme de matching hybride combinant :  
 Similarité textuelle (Jaro–Winkler sur noms nettoyés)  
 Proximité géographique (distance de Haversine)  
-Indexation spatiale via geohash pour accélérer la recherche de candidats  
+Indexation spatiale via geohash pour accélérer la recherche de candidats  => https://fr.wikipedia.org/wiki/Geohash
+
 
 # Architecture DBT – Modèle Medallion
+
+une vue du linéage est disponible ici 
+https://tynfe.github.io/globe_itw/staging/elementary/index.html#/report/lineage?tree_node=%7B%22id%22%3A%22folderNode_globe_itw%22%7D
+
 
 ## Bronze Layer – Raw Models (models/raw/)
 
@@ -34,8 +35,8 @@ Rôle : ingestion et préparation initiale des données brutes.
 
 Sources traitées :
 ```
-raw__gi_stores
-raw__th_stores
+DTL_EXO.GI.MAGASINS
+DTL_EXO.TH.MAGASINS
 ```
 
 Transformations appliquées :
@@ -58,7 +59,6 @@ Type : table incrémentale
 ### Phase 1 – Matching automatique
 
 Sélection des candidats : magasins partageant le même geohash_1200m 
-https://fr.wikipedia.org/wiki/Geohash
 
 
 ```
@@ -140,6 +140,11 @@ capture_transformation_log_metadata()	Post-hook pour journaliser les transformat
 
 # Workflow Git + DBT 
 
+il existe 3 workflow github 
+1. pour deployer staging
+2. pour deployer la prod 
+3. deployer la doc 
+
 Une fois qu’un développeur a validé sa pipeline en environnement de développement, il peut pousser ses changements sur la branche staging.
 
 Afin d’éviter que plusieurs contributeurs n’interfèrent entre eux sur cet environnement partagé, chaque développement est d’abord validé dans une pipeline annexe, exécutée en référence à l’état actuel de staging.
@@ -162,8 +167,8 @@ Production
 
 Dans Snowflake ça donne :
 DHW_DEV_TYRON
-├── ETL                                        ← Staging (référence stable)
-├── dev_tyron_ferreira_feature_add_new_source  ← TON schema isolé
+├── STAGING  ← Staging (référence stable)
+├── dev_tyron_ferreira_feature_add_new_source  ← MON schema isolé
 ├── dev_ilyas_fix_matching_score               ← Schema de Ilyas
 └── dev_ikram_geohash                          ← Schema de Ikram
 ```
@@ -179,18 +184,19 @@ https://github.com/tynfe/globe_itw/actions/runs/19072632369/job/54479368129
 
 
 un **dashboard** `magasin_analyses` est aussi disponible dans l'onget dashboard du service account pour pouvoir faire une étude ad-hoc des matchings 
+https://app.snowflake.com/qyxyvfy/be09150/#/magasin_analyses-d5TLQRT4x
+
 
 # ROADMAP 
-### V0 
+### V0 demandé dans le test 
 
 1. Combiner les deux sources pour construire une dimension magasin unique et historisée dans le DWH. => **DONE** 
 2. Mettre en place un workflow DataOps assurant :
 a. Le versionnement et la traçabilité du DWH, => **DONE** 
 b. Le déploiement automatisé et sécurisé depuis DEV_DWH vers PROD_DWH, => **DONE**
 c. La gestion des migrations et le contrôle manuel des déploiements en production. => **DONE**
-3. Garantir une gouvernance et une sécurité robustes (RBAC) : => **NOT_DONE_BUT_DOCUMENTATION_FOUND**
-a. Définir une gestion claire des rôles et droits d’accès internes (ex. Data Engineer, Analyst, Product
-Owner)
+3. Garantir une gouvernance et une sécurité robustes (RBAC) : => **NOT_DONE_BUT_DOCUMENTATION_FOUND** 
+a. Définir une gestion claire des rôles et droits d’accès internes (ex. Data Engineer, Analyst, Product Owner) **DONE** 
 
 
 4. Mettre en avant la qualité, les tests et l’observabilité : **=> DONE**
@@ -228,6 +234,35 @@ regarder le documetn epic.png
 [ TASK ] => unité la plus petite représentant une tache     
 
 
+![Architecture du pipeline](diagram.svg)
+ 
+### pour run en local 
+
+```sql
+    dbt deps
+    dbt run --select NOM_DU_MODEL --profiles-dir ./ --full-refresh
+```
+
+### pour run les tests + les transformation en staging
+```sql
+    dbt deps
+    dbt build --target staging  
+```
+### ou 
+```
+    git checkout staging
+    git commit --allow-empty -m "feat: deploy from staging workflow"  
+    git push origin staging
+```
+
+### pour run en prod
+il faut deployer une release depuis main qui fait office de prod ici
+ou 
+```
+    git tag -a v.0.9.6 -m "message release"
+    git push origin main --tags 
+```
+
 # Lien utile 
 
 la solution RBAC création de droit et set up des DDL (numéro 1)
@@ -251,3 +286,5 @@ https://medium.com/@lucasrbarbosa/snowflake-data-platform-episode-ii-deep-dive-d
 airflow / cosmos & DBT pour le schema de la roadmap 
 https://www.snowflake.com/en/developers/guides/data-engineering-with-apache-airflow/#creating-a-dag-with-cosmos-and-snowpark  
 https://github.com/astronomer/astronomer-cosmos  
+
+
