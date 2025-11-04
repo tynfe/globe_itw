@@ -50,7 +50,7 @@ globe_itw:
       role: ROLE_TYRON_FERREIRAPRO
       database: DWH_PROD_TYRON
       warehouse: COMPUTE_WH
-      schema: GOLD
+      schema: ETL
       threads: 4
       client_session_keep_alive: False
       query_tag: dbt_tyron_prod
