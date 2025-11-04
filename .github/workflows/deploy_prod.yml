@@ -37,17 +37,6 @@ jobs:
           pip install dbt-snowflake elementary-data
           dbt deps
 
-      - name: Download staging state
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: deploy_staging.yml
-          branch: staging
-          name: staging-artifacts
-          path: staging-state/
-          if_no_artifact_found: warn
-        continue-on-error: true
-
       - name: Deploy to production + docs
         env:
           DBT_DATABASE: DHW_PROD_TYRON
