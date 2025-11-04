@@ -66,10 +66,8 @@ jobs:
       - name: Generate Elementary Report
         run: |
           edr report \
-            --profile elementary \
-            --target default \
+            --target-path ./elementary-data \
             --profiles-dir ./ \
-            --file-path ./elementary_prod_report.html
         continue-on-error: true
 
       - name: Upload production docs
@@ -83,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: elementary-prod-report
-          path: ./elementary_prod_report.html
+          path: ./elementary_data/elementary_report.html
           retention-days: 90
         if: success()
 
