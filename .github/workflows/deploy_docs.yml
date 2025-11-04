@@ -2,11 +2,9 @@ name: Deploy Documentation
 
 on:
   workflow_run:
-    workflows: ["DBT Staging Pipeline", "DBT Production Pipeline"]
+    workflows: ["DBT Production Pipeline"]
     types:
       - completed
-    branches:
-      - staging
   push:
     tags:
       - 'v*'
