@@ -98,15 +98,28 @@ jobs:
           mkdir -p ./public/prod/dbt
           mkdir -p ./public/prod/elementary
 
-          # STAGING
+          echo "🔍 Checking downloaded artifacts..."
+          echo "=== docs-staging contents ==="
+          ls -laR ./docs-staging/ || echo "docs-staging not found"
+          echo "=== elementary-staging contents ==="
+          ls -laR ./elementary-staging/ || echo "elementary-staging not found"
+          echo "=== docs-prod contents ==="
+          ls -laR ./docs-prod/ || echo "docs-prod not found"
+          echo "=== elementary-prod contents ==="
+          ls -laR ./elementary-prod/ || echo "elementary-prod not found"
+
+          # STAGING DBT
           if [ -d "./docs-staging" ]; then
             cp -r ./docs-staging/* ./public/staging/dbt/
             echo "✅ Staging DBT docs copied"
+            echo "Files in public/staging/dbt:"
+            ls -la ./public/staging/dbt/
           else
             echo "⚠️ Staging docs not found"
             echo "<h1>Staging docs not available</h1><p>Run staging pipeline first</p>" > ./public/staging/dbt/index.html
           fi
-          
+
+          # STAGING ELEMENTARY
           if [ -f "./elementary-staging/elementary_report.html" ]; then
             cp ./elementary-staging/elementary_report.html ./public/staging/elementary/index.html
             echo "✅ Staging Elementary report copied"
@@ -115,15 +128,18 @@ jobs:
             echo "<h1>Staging Elementary report not available</h1>" > ./public/staging/elementary/index.html
           fi
 
-          # PROD
+          # PROD DBT
           if [ -d "./docs-prod" ]; then
             cp -r ./docs-prod/* ./public/prod/dbt/
             echo "✅ Prod DBT docs copied"
+            echo "Files in public/prod/dbt:"
+            ls -la ./public/prod/dbt/
           else
             echo "⚠️ Prod docs not found"
             echo "<h1>Production docs not available</h1><p>Create a release tag to generate prod docs</p>" > ./public/prod/dbt/index.html
           fi
-          
+
+          # PROD ELEMENTARY
           if [ -f "./elementary-prod/elementary_report.html" ]; then
             cp ./elementary-prod/elementary_report.html ./public/prod/elementary/index.html
             echo "✅ Prod Elementary report copied"
@@ -131,6 +147,10 @@ jobs:
             echo "⚠️ Prod Elementary report not found"
             echo "<h1>Production Elementary report not available</h1>" > ./public/prod/elementary/index.html
           fi
+
+          echo "=== Final public structure ==="
+          ls -laR ./public/
+          
 
       # ============================================
       # CRÉER LA PAGE D'ACCUEIL
