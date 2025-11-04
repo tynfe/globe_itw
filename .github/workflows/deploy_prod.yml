@@ -65,3 +65,16 @@ jobs:
           path: ./elementary-data/elementary_report.html
           retention-days: 90
         if: success()
+
+      - name: Set dev schema
+        run: |
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr '/' '_')
+          echo "DBT_SCHEMA=dev_${GITHUB_ACTOR}_${BRANCH_NAME}" >> $GITHUB_ENV
+
+      - name: Clean up dev schemas
+        env:
+            DBT_DATABASE: DHW_DEV_TYRON
+        run: |
+            echo "🧹 Starting cleanup of dev schemas in DHW_DEV_TYRON..."
+            dbt run-operation drop_schema --args '{database: DHW_DEV_TYRON}' --target dev 
+          continue-on-error: true
