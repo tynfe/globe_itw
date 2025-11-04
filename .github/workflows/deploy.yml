@@ -593,14 +593,14 @@ jobs:
         with:
           enablement: true
 
-      - name: Upload artifact (prod)
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './public'
-          name: 'github-pages-prod'      # 👈 nom unique
+          name: 'github-pages-prod'
 
-      - name: Deploy to GitHub Pages (prod)
-        id: deploy_prod                 # 👈 id unique
+      - name: Deploy to GitHub Pages
+        id: deploy_prod
         uses: actions/deploy-pages@v4
         with:
           artifact_name: 'github-pages-prod'
