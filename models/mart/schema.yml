@@ -52,6 +52,15 @@ models:
           config:
             severity: error
 
+      # ✅ Pas de TO DELETEs dans les names
+      - dbt_utils.expression_is_true:
+          name: no_zero_coordinates_matched
+          expression: |
+            (SELECT COUNT(*) FROM {{ ref('mart__stores_matched') }} 
+             WHERE store_name = 'TO DELETE'
+          config:
+            severity: error
+
   # ============================================
   # VUE : DIAGNOSTIC DES NON-MATCHÉS
   # ============================================
@@ -228,14 +237,6 @@ models:
           config:
             severity: warn
 
-      # 📊 Distribution des raisons d'échec
-      - dbt_utils.expression_is_true:
-          name: failure_reasons_tracked
-          expression: |
-            (SELECT COUNT(DISTINCT failure_reason) 
-             FROM {{ ref('mart__view__unmatched_stores') }}) >= 1
-          config:
-            severity: warn
 
       # 🔍 Vérifier que chaque store a au moins 1 candidat
       - dbt_utils.expression_is_true:

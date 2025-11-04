@@ -1,10 +1,16 @@
 name: DBT CI/CD Pipeline
 
 on:
+  workflow_run:
+    workflows: [ "DBT CI/CD Pipeline" ]
   push:
   pull_request:
     branches: [main, staging]
   workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
 
 env:
   DBT_PROFILES_DIR: ./
@@ -50,7 +56,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: ${{ github.workflow }}
+          workflow: deploy.yml
           branch: staging
           name: staging-artifacts
           path: staging-state/
