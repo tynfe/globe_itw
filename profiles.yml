@@ -48,9 +48,9 @@ globe_itw:
       password: "{{ env_var('DBT_PASSWORD_GLOBE') }}"
 
       role: ROLE_TYRON_FERREIRAPRO
-      database: DWH_DEV_TYRON
+      database: DWH_PROD_TYRON
       warehouse: COMPUTE_WH
-      schema: DWH_DEV_TYRON
+      schema: GOLD
       threads: 4
       client_session_keep_alive: False
       query_tag: dbt_tyron_prod

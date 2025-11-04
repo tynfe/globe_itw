@@ -1,0 +1,60 @@
+# models/staging/sources.yml
+version: 2
+
+sources:
+  - name: gi
+    database: DTL_EXO
+    schema: GI
+    description: "Données des magasins depuis le schema GI"
+
+    tables:
+      - name: MAGASINS
+        description: "Table des magasins GI"
+
+        # Freshness monitoring
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+        columns:
+          - name: id
+            description: "Identifiant unique du magasin"
+
+          - name: name
+            description: "Nom du magasin"
+
+          - name: latitude
+            description: "Latitude GPS"
+
+          - name: longitude
+            description: "Longitude GPS"
+
+
+  - name: th
+    database: DTL_EXO
+    schema: TH
+    description: "Données des magasins depuis le schema TH"
+
+    tables:
+      - name: MAGASINS
+        description: "Table des magasins TI"
+
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+        columns:
+          - name: id
+            description: "Identifiant unique du magasin TI"
+
+          - name: name
+            description: "Nom du magasin"
+
+          - name: latitude
+            description: "Latitude GPS"
+
+          - name: longitude
+            description: "Longitude GPS"
+
