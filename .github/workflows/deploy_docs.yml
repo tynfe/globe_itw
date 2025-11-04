@@ -47,7 +47,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: staging.yml
+          workflow: deploy_staging.yml
           branch: staging
           name: staging-docs
           path: ./docs-staging
@@ -58,7 +58,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: staging.yml
+          workflow: deploy_staging.yml
           branch: staging
           name: elementary-staging-report
           path: ./elementary-staging
@@ -72,7 +72,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: production.yml
+          workflow: deploy_production.yml
           name: prod-docs
           path: ./docs-prod
           if_no_artifact_found: warn
@@ -82,7 +82,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: production.yml
+          workflow: deploy_production.yml
           name: elementary-prod-report
           path: ./elementary-prod
           if_no_artifact_found: warn
