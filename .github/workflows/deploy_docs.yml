@@ -10,6 +10,7 @@ on:
   push:
     tags:
       - 'v*'
+
   workflow_dispatch:
 
 permissions:
@@ -72,7 +73,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: deploy_production.yml
+          workflow: deploy_prod.yml
           name: prod-docs
           path: ./docs-prod
           if_no_artifact_found: warn
@@ -82,7 +83,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: deploy_production.yml
+          workflow: deploy_prod.yml
           name: elementary-prod-report
           path: ./elementary-prod
           if_no_artifact_found: warn
