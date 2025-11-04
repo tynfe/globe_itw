@@ -4,7 +4,7 @@ models:
   # ============================================
   # VUE : STORES MATCHÉS
   # ============================================
-  - name: mart__stores_matched
+  - name: mart__view__matched_stores
     description: "Vue filtrée contenant uniquement les magasins correctement matchés entre GI et TH"
 
     columns:
@@ -39,7 +39,7 @@ models:
       # ✅ Vérifier que la vue contient uniquement des matchs
       - dbt_utils.expression_is_true:
           name: only_matched_records
-          expression: "(SELECT COUNT(*) FROM {{ ref('mart__stores_matched') }}) > 0"
+          expression: "(SELECT COUNT(*) FROM {{ ref('mart__view__matched_stores') }}) > 0"
           config:
             severity: error
 
@@ -47,17 +47,17 @@ models:
       - dbt_utils.expression_is_true:
           name: no_zero_coordinates_matched
           expression: |
-            (SELECT COUNT(*) FROM {{ ref('mart__stores_matched') }} 
+            (SELECT COUNT(*) FROM {{ ref('mart__view__matched_stores') }} 
              WHERE latitude = 0 OR longitude = 0) = 0
           config:
             severity: error
 
       # ✅ Pas de TO DELETEs dans les names
       - dbt_utils.expression_is_true:
-          name: no_zero_coordinates_matched
+          name: no_invalid_name_in_poi_matched
           expression: |
-            (SELECT COUNT(*) FROM {{ ref('mart__stores_matched') }} 
-             WHERE store_name = 'TO DELETE'
+            (SELECT COUNT(*) FROM {{ ref('mart__view__matched_stores') }} 
+             WHERE store_name = 'TO DELETE') = 0
           config:
             severity: error
 

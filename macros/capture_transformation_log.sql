@@ -1,7 +1,7 @@
 {% macro capture_transformation_log_metadata() %}
     {% if execute %}
         {% set query %}
-            INSERT INTO {{ target.database }}.{{ target.schema }}.TRANSFORMATION_LOGS (
+            INSERT INTO {{ target.database }}.MONITORING.TRANSFORMATION_LOGS (
                 model_name,
                 schema_name,
                 database_name,

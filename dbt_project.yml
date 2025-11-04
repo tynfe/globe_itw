@@ -31,11 +31,14 @@ clean-targets:         # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   globe_itw:
-    intermediate:
+    staging:
       +materialized: table
+      +schema: staging
     mart:
       +materialized: table
+      +schema: gold
     raw:
       +materialized: ephemeral
+      +schema: raw
     elementary:
-      +schema: "elementary"
+      +schema: etl
