@@ -138,6 +138,18 @@ drop_dev_schemas()	Nettoyage automatique des schémas de développement
 capture_transformation_log_metadata()	Post-hook pour journaliser les transformations
 ````
 
+### schema en prod
+
+![schema in prod](image/schema_prod.png)
+
+**ETL** => tout ce qui est lié a dbt-elementary pour les tests de qualité et anomalie    
+**GOLD** => contient la data final vu qui est un pointeur ICEBERG sur le dernier commit validé par le tag en prod (voir archi) et a utiliser dans les visu  
+**RAW** => la data raw avec peu de transformation
+**STAGING** => data aggregé et historisé 
+
+aussi disponible au lien suivant pour staging https://tynfe.github.io/globe_itw/staging/dbt/index.html#!/model/model.globe_itw.mart__view__matched_stores
+
+
 # Workflow Git + DBT 
 
 il existe 3 workflow github 
@@ -195,7 +207,7 @@ https://app.snowflake.com/qyxyvfy/be09150/#/magasin_analyses-d5TLQRT4x
 a. Le versionnement et la traçabilité du DWH, => **DONE** 
 b. Le déploiement automatisé et sécurisé depuis DEV_DWH vers PROD_DWH, => **DONE**
 c. La gestion des migrations et le contrôle manuel des déploiements en production. => **DONE**
-3. Garantir une gouvernance et une sécurité robustes (RBAC) : => **NOT_DONE_BUT_DOCUMENTATION_FOUND** 
+3. Garantir une gouvernance et une sécurité robustes (RBAC) : => **NOT_DONE** 
 a. Définir une gestion claire des rôles et droits d’accès internes (ex. Data Engineer, Analyst, Product Owner) **DONE** 
 
 
@@ -204,7 +216,6 @@ a. Inclure des tests (not_null, unique, relations, custom), **=> DONE**
 b. Définir des indicateurs de qualité de données (completude, fraîcheur, cohérence), **=> DONE**
 
 ### Définir une approche de priorisation entre nouvelles sources, maintenance, dette technique et exigences réglementaires,
-
 
 **1: Produits =>**
 regarder le document /image/Roadmap.png 
@@ -235,7 +246,9 @@ regarder le documetn /image/epic.png
 [ TASK ] => unité la plus petite représentant une tache     
 
 
-version finale avec la reprise d'incident => https://app.diagrams.net/#G1to1hSkW4aa2D2toyK5mMO2m7A5bMV2T_#%7B%22pageId%22%3A%22hd_UuNUxtmec_6K0C_dU%22%7D
+version finale avec la reprise d'incident => https://app.diagrams.net/#G1to1hSkW4aa2D2toyK5mMO2m7A5bMV2T_#%7B%22pageId%22%3A%22hd_UuNUxtmec_6K0C_dU%22%7D  
+                                          => README_archi_reprise_incident.md   
+
 
 ### pour run en local 
 
