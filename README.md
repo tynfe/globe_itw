@@ -160,7 +160,7 @@ Staging Branch
     ↓ staging artifacts saved
     ↓
 Tag v1.x.x
-    ↓ deploy to production manuelle declencé par une relase + doc 
+    ↓ deploy to production manuelle declenché par une relase + doc 
     ↓ cleanup dev schemas
     ↓
 Production
@@ -207,35 +207,36 @@ b. Définir des indicateurs de qualité de données (completude, fraîcheur, coh
 
 
 **1: Produits =>**
-regarder le document Roadmap.png 
+regarder le document /image/Roadmap.png 
 
 Axe prioritaire, il répond directement aux besoins clients ou aux retours produits. Ces demandes sont donc traitées en top priorité.
 Plus le volume de demandes sur cet axe est important, plus la bande passante disponible pour l’axe 3 (Foundation) diminue.
-Cet axe inclut également les améliorations continues et la maintenance du produit (par exemple : la source d’ingestion ou les algorithmes de matching).
+Cet axe inclut également les améliorations continues et la maintenance du produit (par exemple : la source d’ingestion ou les algorithmes de matching dans ce use case).
 
 **2: Data driven décision** 
 
 Cet axe vise à améliorer nos produits et processus en s’appuyant sur les analyses issues des données que nous générons.
 Il regroupe la définition des KPI de performance, les études analytiques et les outils de pilotage destinés à démocratiser la culture data au sein de l’entreprise et à évangéliser les autres équipes à une approche orientée données.
+(ex: https://tynfe.github.io/globe_itw/)
 
 **3: foundation** 
 
 Il s’agit de l’axe infrastructure et socle technique, garant de la scalabilité, de la qualité et de la fiabilité du Data Platform.
 Le schéma d’architecture actuel s’appuie sur des modules non encore disponibles dans la version 0 (Airflow, RBAC, DDL Terraformé, etc.).
 Cet axe, bien que secondaire dans la priorisation, s’adapte aux besoins issus des deux autres axes.
-Il englobe l’ensemble des sujets infra/scaling/alerting/monitoring/qualité, souvent structurés sous forme d’epics, et constitue la base de notre future Data Platform.
+Il englobe l’ensemble des sujets infra/scaling/alerting/monitoring/qualité, structurés sous forme d’epics, et constitue la base de notre future Data Platform.
 
 ### Expliquer comment prioriser les développements et déploiements dans un contexte de forte demande métier,
 
-regarder le documetn epic.png  
+regarder le documetn /image/epic.png  
 
 [TEAM OBJECTIF] => indicateur de réussite pour valider => [ LIST d'EPICs ]  
 [EPIC ] => 1 famille de task   
 [ TASK ] => unité la plus petite représentant une tache     
 
 
-![Architecture du pipeline](diagram.svg)
- 
+version finale avec la reprise d'incident => https://app.diagrams.net/#G1to1hSkW4aa2D2toyK5mMO2m7A5bMV2T_#%7B%22pageId%22%3A%22hd_UuNUxtmec_6K0C_dU%22%7D
+
 ### pour run en local 
 
 ```sql
